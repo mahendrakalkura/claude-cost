@@ -1,0 +1,104 @@
+{
+  "claude-opus-4-8": {
+    "input_cost_per_token": 0.000015,
+    "output_cost_per_token": 0.000075,
+    "cache_read_input_token_cost": 0.0000015,
+    "cache_creation_input_token_cost": 0.00001875
+  },
+  "claude-opus-4-7": {
+    "input_cost_per_token": 0.000015,
+    "output_cost_per_token": 0.000075,
+    "cache_read_input_token_cost": 0.0000015,
+    "cache_creation_input_token_cost": 0.00001875
+  },
+  "claude-opus-4-6": {
+    "input_cost_per_token": 0.000015,
+    "output_cost_per_token": 0.000075,
+    "cache_read_input_token_cost": 0.0000015,
+    "cache_creation_input_token_cost": 0.00001875
+  },
+  "claude-sonnet-4-6": {
+    "input_cost_per_token": 0.000003,
+    "output_cost_per_token": 0.000015,
+    "cache_read_input_token_cost": 0.0000003,
+    "cache_creation_input_token_cost": 0.00000375
+  },
+  "claude-sonnet-4-5": {
+    "input_cost_per_token": 0.000003,
+    "output_cost_per_token": 0.000015,
+    "cache_read_input_token_cost": 0.0000003,
+    "cache_creation_input_token_cost": 0.00000375
+  },
+  "claude-haiku-4-5": {
+    "input_cost_per_token": 0.0000008,
+    "output_cost_per_token": 0.000004,
+    "cache_read_input_token_cost": 0.00000008,
+    "cache_creation_input_token_cost": 0.000001
+  },
+  "gpt-5.2": {
+    "input_cost_per_token": 0.00000175,
+    "output_cost_per_token": 0.000014,
+    "cache_read_input_token_cost": 0.000000175,
+    "cache_creation_input_token_cost": 0.0000021875
+  },
+  "gpt-5.2-codex": {
+    "input_cost_per_token": 0.00000175,
+    "output_cost_per_token": 0.000014,
+    "cache_read_input_token_cost": 0.000000175,
+    "cache_creation_input_token_cost": 0.0000021875
+  },
+  "gpt-5.1": {
+    "input_cost_per_token": 0.00000175,
+    "output_cost_per_token": 0.000014,
+    "cache_read_input_token_cost": 0.000000175,
+    "cache_creation_input_token_cost": 0.0000021875
+  },
+  "gpt-5.1-codex": {
+    "input_cost_per_token": 0.00000175,
+    "output_cost_per_token": 0.000014,
+    "cache_read_input_token_cost": 0.000000175,
+    "cache_creation_input_token_cost": 0.0000021875
+  },
+  "kimi-k2-thinking": {
+    "input_cost_per_token": 0.0000006,
+    "output_cost_per_token": 0.0000012,
+    "cache_read_input_token_cost": 0.00000006,
+    "cache_creation_input_token_cost": 0.00000075
+  },
+  "kimi-k2-turbo-preview": {
+    "input_cost_per_token": 0.0000006,
+    "output_cost_per_token": 0.0000012,
+    "cache_read_input_token_cost": 0.00000006,
+    "cache_creation_input_token_cost": 0.00000075
+  },
+  "deepseek-reasoner": {
+    "input_cost_per_token": 0.00000055,
+    "output_cost_per_token": 0.00000219,
+    "cache_read_input_token_cost": 0.000000055,
+    "cache_creation_input_token_cost": 0.0000006875
+  },
+  "gemini-2.5-pro": {
+    "input_cost_per_token": 0.0000025,
+    "output_cost_per_token": 0.00001,
+    "cache_read_input_token_cost": 0.00000025,
+    "cache_creation_input_token_cost": 0.000003125
+  },
+  "gemini-2.5-flash": {
+    "input_cost_per_token": 0.00000015,
+    "output_cost_per_token": 0.0000006,
+    "cache_read_input_token_cost": 0.000000015,
+    "cache_creation_input_token_cost": 0.0000001875
+  },
+  "google/gemini-2.5-pro": {
+    "input_cost_per_token": 0.0000025,
+    "output_cost_per_token": 0.00001,
+    "cache_read_input_token_cost": 0.00000025,
+    "cache_creation_input_token_cost": 0.000003125
+  },
+  "google/gemini-2.5-flash": {
+    "input_cost_per_token": 0.00000015,
+    "output_cost_per_token": 0.0000006,
+    "cache_read_input_token_cost": 0.000000015,
+    "cache_creation_input_token_cost": 0.0000001875
+  }
+}
