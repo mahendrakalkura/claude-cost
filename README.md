@@ -36,13 +36,11 @@ The mode flags `--agent`, `--day`, and `--month` combine; with none set, all thr
 
 `claude-cost` discovers session logs under your home directory automatically. No configuration is needed - parsers run for whichever agents have data on disk.
 
-+----------+----------------------------------------------------+
 | Agent    | Source                                             |
-+----------+----------------------------------------------------+
-| claude   | ~/.claude/projects/**/*.jsonl                      |
-| codex    | ~/.codex*/sessions/**/rollout-*.jsonl              |
-| opencode | ~/.local/share/opencode/storage/message/**/*.json  |
-+----------+----------------------------------------------------+
+| -------- | -------------------------------------------------- |
+| claude   | `~/.claude/projects/**/*.jsonl`                    |
+| codex    | `~/.codex*/sessions/**/rollout-*.jsonl`            |
+| opencode | `~/.local/share/opencode/storage/message/**/*.json` |
 
 The claude parser also reads `~/.agents/projects` (a non-default location) in addition to the standard `~/.claude/projects`. The codex parser globs every `~/.codex*` directory, so multiple Codex homes are picked up.
 
@@ -50,13 +48,11 @@ The claude parser also reads `~/.agents/projects` (a non-default location) in ad
 
 If your logs live somewhere non-standard, point any parser at one or more directories with an environment variable. Multiple directories are separated by your OS path-list separator (`:` on Linux and macOS). When a variable is unset, the parser uses its built-in defaults under `$HOME`.
 
-+----------+----------------------------+-----------------------------------------------+
-| Agent    | Environment variable       | Each directory holds                          |
-+----------+----------------------------+-----------------------------------------------+
-| claude   | CLAUDE_COST_CLAUDE_DIRS    | per-project subdirectories of *.jsonl files   |
-| codex    | CLAUDE_COST_CODEX_DIRS      | a codex home with a sessions/YYYY/MM/DD tree  |
-| opencode | CLAUDE_COST_OPENCODE_DIRS  | per-session subdirectories of *.json messages |
-+----------+----------------------------+-----------------------------------------------+
+| Agent    | Environment variable         | Each directory holds                            |
+| -------- | ---------------------------- | ----------------------------------------------- |
+| claude   | `CLAUDE_COST_CLAUDE_DIRS`     | per-project subdirectories of `*.jsonl` files   |
+| codex    | `CLAUDE_COST_CODEX_DIRS`      | a codex home with a `sessions/YYYY/MM/DD` tree  |
+| opencode | `CLAUDE_COST_OPENCODE_DIRS`   | per-session subdirectories of `*.json` messages |
 
 ```
 CLAUDE_COST_CLAUDE_DIRS=/mnt/logs/claude:/backup/claude claude-cost --agent
