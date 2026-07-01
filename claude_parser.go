@@ -28,14 +28,24 @@ func (p *ClaudeParser) Discover() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defaults := []string{
-		filepath.Join(home, ".agents", "projects"),
-		filepath.Join(home, ".claude", "projects"),
+	// A Claude Code home can live in several places: the standard ~/.claude, the
+	// legacy ~/.agents, any per-profile ~/.claude-* variant (e.g. ~/.claude-mk),
+	// or a custom CLAUDE_CONFIG_DIR. Each home stores session logs under its own
+	// projects/ directory. Glob the ~/.claude* homes like the codex parser globs
+	// ~/.codex*; discover() de-duplicates homes that symlink to the same store.
+	homes := []string{filepath.Join(home, ".agents")}
+	matches, _ := filepath.Glob(filepath.Join(home, ".claude*"))
+	for _, m := range matches {
+		if fi, err := os.Stat(m); err == nil && fi.IsDir() {
+			homes = append(homes, m)
+		}
 	}
-	// Claude Code relocates its whole config/data tree when CLAUDE_CONFIG_DIR is
-	// set, and writes session logs to $CLAUDE_CONFIG_DIR/projects.
 	if dir := os.Getenv("CLAUDE_CONFIG_DIR"); dir != "" {
-		defaults = append(defaults, filepath.Join(dir, "projects"))
+		homes = append(homes, dir)
+	}
+	var defaults []string
+	for _, h := range homes {
+		defaults = append(defaults, filepath.Join(h, "projects"))
 	}
 	return discover(rootsFromEnv(ClaudeDirsEnv, defaults), filepath.Join("*", "*.jsonl"))
 }

@@ -38,11 +38,11 @@ The mode flags `--agent`, `--day`, and `--month` combine; with none set, all thr
 
 | Agent    | Source                                             |
 | -------- | -------------------------------------------------- |
-| claude   | `~/.claude/projects/**/*.jsonl`                    |
+| claude   | `~/.claude*/projects/**/*.jsonl`                    |
 | codex    | `~/.codex*/sessions/**/rollout-*.jsonl`            |
 | opencode | `~/.local/share/opencode/storage/message/**/*.json` |
 
-The claude parser also reads `~/.agents/projects` (a non-default location) in addition to the standard `~/.claude/projects`. When `CLAUDE_CONFIG_DIR` is set (Claude Code's own variable for relocating its config and data), it also reads `$CLAUDE_CONFIG_DIR/projects`. The codex parser globs every `~/.codex*` directory, so multiple Codex homes are picked up.
+The claude parser globs every `~/.claude*` home (so per-profile homes like `~/.claude-work` are picked up), and also reads `~/.agents/projects` and, when set, `$CLAUDE_CONFIG_DIR/projects` (Claude Code's own variable for relocating its config and data). The codex parser globs every `~/.codex*` directory, so multiple Codex homes are picked up. Homes that symlink to the same store are de-duplicated by real path, so shared data is never counted twice.
 
 ## Configuring log locations
 

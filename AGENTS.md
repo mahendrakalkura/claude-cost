@@ -26,7 +26,7 @@ All Go files live in the repository root under `package main`. There are no subd
 ```
 main.go               CLI entry, flag parsing, parallel file parse, dispatch to views
 agent.go              Record type, Parser interface, global registry
-claude_parser.go      Claude Code JSONL parser (~/.claude/projects, ~/.agents/projects)
+claude_parser.go      Claude Code JSONL parser (~/.claude*/projects, ~/.agents/projects, $CLAUDE_CONFIG_DIR)
 codex_parser.go       Codex CLI rollout JSONL parser (~/.codex*/sessions)
 opencode_parser.go    Opencode JSON message parser (~/.local/share/opencode)
 pricing.go            ModelPrice, Provider, Lookup, Cost, cache logic
@@ -75,7 +75,7 @@ Each parser exposes an environment variable so a user can point it at custom or 
 | opencode | CLAUDE_COST_OPENCODE_DIRS  | per-session subdirectories of *.json messages   |
 +----------+----------------------------+-------------------------------------------------+
 
-When a variable is unset, the parser falls back to its built-in default roots under `$HOME`. The constants are `ClaudeDirsEnv`, `CodexDirsEnv`, and `OpencodeDirsEnv`. The claude parser additionally honors `CLAUDE_CONFIG_DIR` (Claude Code's own variable for relocating its config and data tree) by adding `$CLAUDE_CONFIG_DIR/projects` to its default roots.
+When a variable is unset, the parser falls back to its built-in default roots under `$HOME`. The constants are `ClaudeDirsEnv`, `CodexDirsEnv`, and `OpencodeDirsEnv`. The claude parser builds its defaults by globbing every `~/.claude*` home (plus `~/.agents`) and appending `projects`, and additionally honors `CLAUDE_CONFIG_DIR` by adding `$CLAUDE_CONFIG_DIR/projects`. Because homes often symlink to a shared store, `discover()` de-duplicates by real path.
 
 ## Adding a new agent
 
