@@ -67,15 +67,29 @@ func Get(name string) (Parser, error) {
 	return p, nil
 }
 
-// discover globs the tail pattern under each root and returns every matching file.
+// discover globs the tail pattern under each root and returns every matching
+// file, de-duplicated by resolved real path so roots that symlink to the same
+// store (a common way to point several agent homes at one directory) are not
+// counted twice.
 func discover(roots []string, tail string) ([]string, error) {
 	var paths []string
+	seen := map[string]bool{}
 	for _, root := range roots {
 		matches, err := filepath.Glob(filepath.Join(root, tail))
 		if err != nil {
 			continue
 		}
-		paths = append(paths, matches...)
+		for _, m := range matches {
+			key := m
+			if real, err := filepath.EvalSymlinks(m); err == nil {
+				key = real
+			}
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			paths = append(paths, m)
+		}
 	}
 	return paths, nil
 }

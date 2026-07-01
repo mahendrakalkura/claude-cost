@@ -63,7 +63,7 @@ A parser registers itself in `init()` by calling `Register(&fooParser{})`. The g
 `Discover()` builds its search roots from two sources via the shared helpers in `agent.go`:
 
 - `rootsFromEnv(name, fallback)` returns the OS-list-separated directories in the named environment variable, or `fallback` when it is unset or empty.
-- `discover(roots, tail)` globs the `tail` pattern under each root and returns every matching file.
+- `discover(roots, tail)` globs the `tail` pattern under each root and returns every matching file, de-duplicated by resolved real path (`filepath.EvalSymlinks`) so roots that symlink to the same store are not counted twice.
 
 Each parser exposes an environment variable so a user can point it at custom or multiple log locations without code changes (entries are separated by the OS path-list separator, `:` on Unix):
 
@@ -75,7 +75,7 @@ Each parser exposes an environment variable so a user can point it at custom or 
 | opencode | CLAUDE_COST_OPENCODE_DIRS  | per-session subdirectories of *.json messages   |
 +----------+----------------------------+-------------------------------------------------+
 
-When a variable is unset, the parser falls back to its built-in default roots under `$HOME`. The constants are `ClaudeDirsEnv`, `CodexDirsEnv`, and `OpencodeDirsEnv`.
+When a variable is unset, the parser falls back to its built-in default roots under `$HOME`. The constants are `ClaudeDirsEnv`, `CodexDirsEnv`, and `OpencodeDirsEnv`. The claude parser additionally honors `CLAUDE_CONFIG_DIR` (Claude Code's own variable for relocating its config and data tree) by adding `$CLAUDE_CONFIG_DIR/projects` to its default roots.
 
 ## Adding a new agent
 

@@ -59,6 +59,34 @@ func TestClaudeDiscoverEnvOverride(t *testing.T) {
 	}
 }
 
+func TestClaudeDiscoverConfigDir(t *testing.T) {
+	configDir := t.TempDir()
+	want := filepath.Join(configDir, "projects", "my-project", "a.jsonl")
+	if err := os.MkdirAll(filepath.Dir(want), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(want, []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CLAUDE_CONFIG_DIR", configDir)
+
+	got, err := (&ClaudeParser{}).Discover()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Home defaults may or may not exist on the test machine, so only require
+	// that $CLAUDE_CONFIG_DIR/projects was searched and its file was found.
+	found := false
+	for _, p := range got {
+		if p == want {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("Discover did not include %s from CLAUDE_CONFIG_DIR: got %v", want, got)
+	}
+}
+
 func TestProjectFromDir(t *testing.T) {
 	got := projectFromDir(filepath.Join("anything", "-home-user--agents"))
 	want := string(filepath.Separator) + "home" + string(filepath.Separator) + "user" + string(filepath.Separator) + string(filepath.Separator) + "agents"

@@ -32,6 +32,11 @@ func (p *ClaudeParser) Discover() ([]string, error) {
 		filepath.Join(home, ".agents", "projects"),
 		filepath.Join(home, ".claude", "projects"),
 	}
+	// Claude Code relocates its whole config/data tree when CLAUDE_CONFIG_DIR is
+	// set, and writes session logs to $CLAUDE_CONFIG_DIR/projects.
+	if dir := os.Getenv("CLAUDE_CONFIG_DIR"); dir != "" {
+		defaults = append(defaults, filepath.Join(dir, "projects"))
+	}
 	return discover(rootsFromEnv(ClaudeDirsEnv, defaults), filepath.Join("*", "*.jsonl"))
 }
 

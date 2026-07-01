@@ -106,3 +106,27 @@ func TestDiscover(t *testing.T) {
 		t.Errorf("got %v, want [%s]", got, want)
 	}
 }
+
+func TestDiscoverDedupesSymlinkedRoots(t *testing.T) {
+	base := t.TempDir()
+	real := filepath.Join(base, "real")
+	if err := os.MkdirAll(filepath.Join(real, "proj"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(real, "proj", "a.jsonl"), []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// A second root that symlinks to the same store must not double-count.
+	link := filepath.Join(base, "link")
+	if err := os.Symlink(real, link); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := discover([]string{real, link}, filepath.Join("*", "*.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 {
+		t.Errorf("got %d files, want 1 (symlinked roots must dedupe): %v", len(got), got)
+	}
+}

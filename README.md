@@ -42,7 +42,7 @@ The mode flags `--agent`, `--day`, and `--month` combine; with none set, all thr
 | codex    | `~/.codex*/sessions/**/rollout-*.jsonl`            |
 | opencode | `~/.local/share/opencode/storage/message/**/*.json` |
 
-The claude parser also reads `~/.agents/projects` (a non-default location) in addition to the standard `~/.claude/projects`. The codex parser globs every `~/.codex*` directory, so multiple Codex homes are picked up.
+The claude parser also reads `~/.agents/projects` (a non-default location) in addition to the standard `~/.claude/projects`. When `CLAUDE_CONFIG_DIR` is set (Claude Code's own variable for relocating its config and data), it also reads `$CLAUDE_CONFIG_DIR/projects`. The codex parser globs every `~/.codex*` directory, so multiple Codex homes are picked up.
 
 ## Configuring log locations
 
