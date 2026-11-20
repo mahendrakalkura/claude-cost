@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -13,6 +15,7 @@ type Record struct {
 	Agent            string
 	CacheReadTokens  int64
 	CacheWriteTokens int64
+	ID               string // source log entry key; main keeps the first record per non-empty ID so entries copied into several logs (pi forks and clones) count once
 	InputTokens      int64
 	Model            string
 	OutputTokens     int64
@@ -72,26 +75,46 @@ func Get(name string) (Parser, error) {
 // store (a common way to point several agent homes at one directory) are not
 // counted twice.
 func discover(roots []string, tail string) ([]string, error) {
-	var paths []string
-	seen := map[string]bool{}
+	var matches []string
 	for _, root := range roots {
-		matches, err := filepath.Glob(filepath.Join(root, tail))
+		m, err := filepath.Glob(filepath.Join(root, tail))
 		if err != nil {
 			continue
 		}
-		for _, m := range matches {
-			key := m
-			if real, err := filepath.EvalSymlinks(m); err == nil {
-				key = real
+		matches = append(matches, m...)
+	}
+	return uniqueByRealPath(matches), nil
+}
+
+// discoverTree walks each root recursively and returns every regular file whose
+// name ends with suffix, de-duplicated by resolved real path like discover. Use it
+// for agents whose log tree has no fixed depth. A root that is a symlink is
+// resolved first, because WalkDir never descends into a symlinked root.
+// Unreadable roots and directories are skipped.
+func discoverTree(roots []string, suffix string) ([]string, error) {
+	var matches []string
+	for _, root := range roots {
+		if real, err := filepath.EvalSymlinks(root); err == nil {
+			root = real
+		}
+		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				if entry != nil && entry.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
 			}
-			if seen[key] {
-				continue
+			if !entry.Type().IsRegular() || !strings.HasSuffix(entry.Name(), suffix) {
+				return nil
 			}
-			seen[key] = true
-			paths = append(paths, m)
+			matches = append(matches, path)
+			return nil
+		})
+		if err != nil {
+			continue
 		}
 	}
-	return paths, nil
+	return uniqueByRealPath(matches), nil
 }
 
 // rootsFromEnv returns the OS-list-separated directories in the named environment
@@ -102,6 +125,25 @@ func rootsFromEnv(name string, fallback []string) []string {
 		return filepath.SplitList(v)
 	}
 	return fallback
+}
+
+// uniqueByRealPath drops every path whose resolved real path was already seen,
+// keeping the first occurrence and the input order.
+func uniqueByRealPath(matches []string) []string {
+	var paths []string
+	seen := map[string]bool{}
+	for _, m := range matches {
+		key := m
+		if real, err := filepath.EvalSymlinks(m); err == nil {
+			key = real
+		}
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		paths = append(paths, m)
+	}
+	return paths
 }
 
 func sortStrings(s []string) {

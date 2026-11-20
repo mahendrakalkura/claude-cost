@@ -92,9 +92,20 @@ func main() {
 	}
 	wg.Wait()
 
+	// Merge in job order and keep the first record per non-empty ID, so entries copied into several log files count once.
 	var allRecords []Record
+	seen := map[string]bool{}
 	for _, records := range parsed {
-		allRecords = append(allRecords, records...)
+		for _, r := range records {
+			if r.ID != "" {
+				key := fmt.Sprintf("%s\x00%s", r.Agent, r.ID)
+				if seen[key] {
+					continue
+				}
+				seen[key] = true
+			}
+			allRecords = append(allRecords, r)
+		}
 	}
 
 	res := Compute(allRecords, provider)

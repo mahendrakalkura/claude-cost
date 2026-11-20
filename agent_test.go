@@ -23,8 +23,8 @@ func TestAllReturnsSortedNames(t *testing.T) {
 			t.Fatalf("All() not sorted: %v", names)
 		}
 	}
-	// The three built-in parsers must be registered via their init() functions.
-	for _, want := range []string{"claude", "codex", "opencode"} {
+	// The built-in parsers must be registered via their init() functions.
+	for _, want := range []string{"claude", "codex", "opencode", "pi"} {
 		if _, err := Get(want); err != nil {
 			t.Errorf("expected built-in parser %q to be registered: %v", want, err)
 		}

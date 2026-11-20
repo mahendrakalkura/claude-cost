@@ -29,6 +29,7 @@ agent.go              Record type, Parser interface, global registry
 claude_parser.go      Claude Code JSONL parser (~/.claude*/projects, ~/.agents/projects, $CLAUDE_CONFIG_DIR)
 codex_parser.go       Codex CLI rollout JSONL parser (~/.codex*/sessions)
 opencode_parser.go    Opencode JSON message parser (~/.local/share/opencode)
+pi_parser.go          Pi JSONL session parser (~/.pi/agent/sessions, $PI_CODING_AGENT_DIR, $PI_CODING_AGENT_SESSION_DIR)
 pricing.go            ModelPrice, Provider, Lookup, Cost, cache logic
 litellm.go            Live fetch from the LiteLLM model prices JSON
 fallback.go           //go:embed embedded offline pricing table
@@ -64,6 +65,7 @@ A parser registers itself in `init()` by calling `Register(&fooParser{})`. The g
 
 - `rootsFromEnv(name, fallback)` returns the OS-list-separated directories in the named environment variable, or `fallback` when it is unset or empty.
 - `discover(roots, tail)` globs the `tail` pattern under each root and returns every matching file, de-duplicated by resolved real path (`filepath.EvalSymlinks`) so roots that symlink to the same store are not counted twice.
+- `discoverTree(roots, suffix)` walks each root recursively for files ending in `suffix`, with the same real-path de-duplication, for log trees with no fixed depth.
 
 Each parser exposes an environment variable so a user can point it at custom or multiple log locations without code changes (entries are separated by the OS path-list separator, `:` on Unix):
 
@@ -73,9 +75,12 @@ Each parser exposes an environment variable so a user can point it at custom or 
 | claude   | CLAUDE_COST_CLAUDE_DIRS    | per-project subdirectories of *.jsonl files     |
 | codex    | CLAUDE_COST_CODEX_DIRS      | a codex home with a sessions/YYYY/MM/DD tree    |
 | opencode | CLAUDE_COST_OPENCODE_DIRS  | per-session subdirectories of *.json messages   |
+| pi       | CLAUDE_COST_PI_DIRS        | *.jsonl session files at any depth              |
 +----------+----------------------------+-------------------------------------------------+
 
-When a variable is unset, the parser falls back to its built-in default roots under `$HOME`. The constants are `ClaudeDirsEnv`, `CodexDirsEnv`, and `OpencodeDirsEnv`. The claude parser builds its defaults by globbing every `~/.claude*` home (plus `~/.agents`) and appending `projects`, and additionally honors `CLAUDE_CONFIG_DIR` by adding `$CLAUDE_CONFIG_DIR/projects`. Because homes often symlink to a shared store, `discover()` de-duplicates by real path.
+When a variable is unset, the parser falls back to its built-in default roots under `$HOME`. The constants are `ClaudeDirsEnv`, `CodexDirsEnv`, `OpencodeDirsEnv`, and `PiDirsEnv`. The claude parser builds its defaults by globbing every `~/.claude*` home (plus `~/.agents`) and appending `projects`, and additionally honors `CLAUDE_CONFIG_DIR` by adding `$CLAUDE_CONFIG_DIR/projects`. Because homes often symlink to a shared store, `discover()` de-duplicates by real path. The pi parser defaults to `$PI_CODING_AGENT_DIR/sessions` (or `~/.pi/agent/sessions`) plus `$PI_CODING_AGENT_SESSION_DIR`.
+
+A parser may set `Record.ID` to a key that identifies the source log entry. `main.go` keeps only the first record per agent and non-empty ID, in job order. The pi parser uses it because `/fork` and `/clone` copy session entries into new files; it records assistant messages, `usage` entries, and `compaction`/`branch_summary` usage, records the subagent usage that older subagent tools put on their tool results (model from `details.modelName`, else `pi-subagent`) except in sessions that have a `<session>/tasks/` directory, where the subagent sessions are files the parser counts on their own, and moves `reasoning` out of `output` because pi reports reasoning as a subset of output.
 
 ## Adding a new agent
 

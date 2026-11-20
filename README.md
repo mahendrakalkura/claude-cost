@@ -41,8 +41,9 @@ The mode flags `--agent`, `--day`, and `--month` combine; with none set, all thr
 | claude   | `~/.claude*/projects/**/*.jsonl`                    |
 | codex    | `~/.codex*/sessions/**/rollout-*.jsonl`            |
 | opencode | `~/.local/share/opencode/storage/message/**/*.json` |
+| pi       | `~/.pi/agent/sessions/**/*.jsonl`                    |
 
-The claude parser globs every `~/.claude*` home (so per-profile homes like `~/.claude-work` are picked up), and also reads `~/.agents/projects` and, when set, `$CLAUDE_CONFIG_DIR/projects` (Claude Code's own variable for relocating its config and data). The codex parser globs every `~/.codex*` directory, so multiple Codex homes are picked up. Homes that symlink to the same store are de-duplicated by real path, so shared data is never counted twice.
+The claude parser globs every `~/.claude*` home (so per-profile homes like `~/.claude-work` are picked up), and also reads `~/.agents/projects` and, when set, `$CLAUDE_CONFIG_DIR/projects` (Claude Code's own variable for relocating its config and data). The codex parser globs every `~/.codex*` directory, so multiple Codex homes are picked up. Homes that symlink to the same store are de-duplicated by real path, so shared data is never counted twice. The pi parser walks `~/.pi/agent/sessions` recursively (subagent sessions sit under `<session>/tasks/`), honors pi's own `PI_CODING_AGENT_DIR` and `PI_CODING_AGENT_SESSION_DIR`, and counts each session entry once by its ID, because `/fork` and `/clone` copy entries into new session files.
 
 ## Configuring log locations
 
@@ -53,6 +54,7 @@ If your logs live somewhere non-standard, point any parser at one or more direct
 | claude   | `CLAUDE_COST_CLAUDE_DIRS`     | per-project subdirectories of `*.jsonl` files   |
 | codex    | `CLAUDE_COST_CODEX_DIRS`      | a codex home with a `sessions/YYYY/MM/DD` tree  |
 | opencode | `CLAUDE_COST_OPENCODE_DIRS`   | per-session subdirectories of `*.json` messages |
+| pi       | `CLAUDE_COST_PI_DIRS`         | `*.jsonl` session files at any depth            |
 
 ```
 CLAUDE_COST_CLAUDE_DIRS=/mnt/logs/claude:/backup/claude claude-cost --agent

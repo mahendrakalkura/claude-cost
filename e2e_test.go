@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -8,13 +10,14 @@ import (
 	"testing"
 )
 
-// cleanEnv returns the current environment with HOME removed, then sets HOME to
-// the given temp dir and appends the extra KEY=VALUE entries. Removing the
-// original HOME matters because syscall.Getenv returns the first match.
+// cleanEnv returns the current environment with HOME and every variable that
+// redirects log discovery removed, then sets HOME to the given temp dir and
+// appends the extra KEY=VALUE entries. Removing the originals matters because
+// syscall.Getenv returns the first match and host settings would leak real logs.
 func cleanEnv(home string, extra ...string) []string {
 	var env []string
 	for _, kv := range os.Environ() {
-		if strings.HasPrefix(kv, "HOME=") {
+		if strings.HasPrefix(kv, "HOME=") || strings.HasPrefix(kv, "CLAUDE_CONFIG_DIR=") || strings.HasPrefix(kv, "CLAUDE_COST_") || strings.HasPrefix(kv, "PI_CODING_AGENT_") {
 			continue
 		}
 		env = append(env, kv)
@@ -100,6 +103,49 @@ func TestEndToEndJSON(t *testing.T) {
 	got := string(out)
 	if !strings.Contains(got, `"Agents"`) || !strings.Contains(got, `"claude"`) {
 		t.Errorf("json output missing expected keys\n%s", got)
+	}
+}
+
+// TestEndToEndPiForkDedup checks that an assistant entry copied into a forked pi session file is counted once.
+func TestEndToEndPiForkDedup(t *testing.T) {
+	bin := buildBinary(t)
+	home := t.TempDir()
+	root := filepath.Join(home, ".pi", "agent", "sessions", "--home-user-project--")
+	entry := `{"type":"message","id":"a1","parentId":null,"timestamp":"2026-06-26T10:00:02.000Z","message":{"role":"assistant","model":"claude-opus-4-8","usage":{"input":1234,"output":10,"cacheRead":0,"cacheWrite":0}}}`
+	files := map[string]string{
+		"a.jsonl": `{"type":"session","id":"a","timestamp":"2026-06-26T10:00:00.000Z","cwd":"/home/user/project"}`,
+		"b.jsonl": `{"type":"session","id":"b","timestamp":"2026-06-26T11:00:00.000Z","cwd":"/home/user/project","parentSession":"a.jsonl"}`,
+	}
+	for name, header := range files {
+		path := filepath.Join(root, name)
+		err := os.MkdirAll(filepath.Dir(path), 0755)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = os.WriteFile(path, []byte(fmt.Sprintf("%s\n%s\n", header, entry)), 0644)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	cmd := exec.Command(bin, "--no-fetch", "--json")
+	cmd.Env = cleanEnv(home, ClaudeDirsEnv+"="+t.TempDir(), OpencodeDirsEnv+"="+t.TempDir())
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("run failed: %v\n%s", err, out)
+	}
+	results := struct {
+		Agents []struct {
+			Agent       string
+			InputTokens int64
+		}
+	}{}
+	err = json.Unmarshal(out, &results)
+	if err != nil {
+		t.Fatalf("decode: %v\n%s", err, out)
+	}
+	if len(results.Agents) != 1 || results.Agents[0].Agent != "pi" || results.Agents[0].InputTokens != 1234 {
+		t.Errorf("expected one pi agent with input 1234 counted once\n%s", out)
 	}
 }
 
