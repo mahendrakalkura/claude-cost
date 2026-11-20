@@ -14,22 +14,30 @@ import (
 
 // piEntry is one JSONL line of a pi session file. Only the fields that carry or attribute token usage are decoded.
 type piEntry struct {
-	CWD       string     `json:"cwd"`
-	ID        string     `json:"id"`
-	Message   *piMessage `json:"message"`
-	Model     string     `json:"model"`
-	ModelID   string     `json:"modelId"`
-	Timestamp string     `json:"timestamp"`
-	Type      string     `json:"type"`
-	Usage     *piUsage   `json:"usage"`
+	CWD        string           `json:"cwd"`
+	CustomType string           `json:"customType"`
+	Data       *piMigrationData `json:"data"`
+	ID         string           `json:"id"`
+	Message    *piMessage       `json:"message"`
+	Model      string           `json:"model"`
+	ModelID    string           `json:"modelId"`
+	Timestamp  string           `json:"timestamp"`
+	Type       string           `json:"type"`
+	Usage      *piUsage         `json:"usage"`
 }
 
 type piMessage struct {
 	Details       *piToolDetails `json:"details"`
 	Model         string         `json:"model"`
+	Provider      string         `json:"provider"`
 	ResponseModel string         `json:"responseModel"`
 	Role          string         `json:"role"`
 	Usage         *piUsage       `json:"usage"`
+}
+
+// piMigrationData is the data of a session-migration custom entry, which marks a pi session file converted from another agent's logs. Adapter names the source agent, such as claude or gemini.
+type piMigrationData struct {
+	Adapter string `json:"adapter"`
 }
 
 // PiParser reads pi coding agent JSONL session files.
@@ -52,9 +60,12 @@ type piUsage struct {
 const PiDirsEnv = "CLAUDE_COST_PI_DIRS"
 
 const (
+	piAgent         = "pi"
 	piAgentDirEnv   = "PI_CODING_AGENT_DIR"
+	piCustomMigrate = "session-migration"
 	piEntryBranch   = "branch_summary"
 	piEntryCompact  = "compaction"
+	piEntryCustom   = "custom"
 	piEntryMessage  = "message"
 	piEntryModel    = "model_change"
 	piEntrySession  = "session"
@@ -88,9 +99,9 @@ func (p *PiParser) Discover() ([]string, error) {
 	return discoverTree(rootsFromEnv(PiDirsEnv, defaults), piSuffix)
 }
 
-func (p *PiParser) Name() string { return "pi" }
+func (p *PiParser) Name() string { return piAgent }
 
-// Parse emits one record per usage-bearing entry that pi itself counts in session totals: assistant messages, usage entries such as cache warming, the summarization usage of compaction and branch_summary entries, and the subagent usage that subagent tools report on their tool result. Tool result usage is skipped when the session has a <session>/tasks/ directory, because there the subagent sessions are stored, and counted, as their own files. Records carry the entry ID so main can drop entries that forks and clones copy into other session files.
+// Parse emits one record per usage-bearing entry that pi itself counts in session totals: assistant messages, usage entries such as cache warming, the summarization usage of compaction and branch_summary entries, and the subagent usage that subagent tools report on their tool result. Tool result usage is skipped when the session has a <session>/tasks/ directory, because there the subagent sessions are stored, and counted, as their own files. Records carry the entry ID so main can drop entries that forks and clones copy into other session files. A file holding a session-migration custom entry was converted from another agent's logs. Its converted assistant messages carry the adapter as their provider and are attributed to that source agent; turns run in pi after resuming the converted session carry a real pi provider and stay pi usage.
 func (p *PiParser) Parse(path string) (records []Record, err error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -103,6 +114,7 @@ func (p *PiParser) Parse(path string) (records []Record, err error) {
 		}
 	}()
 
+	adapter := ""
 	currentModel := ""
 	project := ""
 	subagentFiles := piHasSubagentFiles(path)
@@ -113,10 +125,14 @@ func (p *PiParser) Parse(path string) (records []Record, err error) {
 		if len(line) > 0 {
 			entry := piEntry{}
 			if json.Unmarshal(line, &entry) == nil {
-				model, usage := "", (*piUsage)(nil)
+				agent, model, usage := piAgent, "", (*piUsage)(nil)
 				switch entry.Type {
 				case piEntryBranch, piEntryCompact:
 					model, usage = currentModel, entry.Usage
+				case piEntryCustom:
+					if entry.CustomType == piCustomMigrate && entry.Data != nil && entry.Data.Adapter != "" {
+						adapter = entry.Data.Adapter
+					}
 				case piEntryMessage:
 					if entry.Message != nil && entry.Message.Role == piRoleAssistant {
 						model, usage = entry.Message.ResponseModel, entry.Message.Usage
@@ -125,6 +141,9 @@ func (p *PiParser) Parse(path string) (records []Record, err error) {
 						}
 						if model != "" {
 							currentModel = model
+						}
+						if adapter != "" && entry.Message.Provider == adapter {
+							agent = adapter
 						}
 					}
 					// The tool result names the subagent model only by display name, which pricing may not resolve.
@@ -143,7 +162,7 @@ func (p *PiParser) Parse(path string) (records []Record, err error) {
 				case piEntryUsage:
 					model, usage = entry.Model, entry.Usage
 				}
-				record, ok := piRecord(entry, model, usage, project)
+				record, ok := piRecord(entry, agent, model, usage, project)
 				if ok {
 					records = append(records, record)
 				}
@@ -165,7 +184,7 @@ func piHasSubagentFiles(path string) bool {
 }
 
 // piRecord converts one usage-bearing entry into a Record. Pi reports reasoning as a subset of output, so it is moved out of OutputTokens to keep the cost formula from billing it twice.
-func piRecord(entry piEntry, model string, usage *piUsage, project string) (Record, bool) {
+func piRecord(entry piEntry, agent, model string, usage *piUsage, project string) (Record, bool) {
 	if model == "" || usage == nil {
 		return Record{}, false
 	}
@@ -178,7 +197,7 @@ func piRecord(entry piEntry, model string, usage *piUsage, project string) (Reco
 	}
 	reasoning := min(usage.Reasoning, usage.Output)
 	record := Record{
-		Agent:            "pi",
+		Agent:            agent,
 		CacheReadTokens:  usage.CacheRead,
 		CacheWriteTokens: usage.CacheWrite,
 		ID:               fmt.Sprintf("%s %s", entry.ID, entry.Timestamp),

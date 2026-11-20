@@ -111,3 +111,36 @@ func TestPiParse(t *testing.T) {
 		}
 	}
 }
+
+// TestPiParseMigratedSession checks that the converted messages of a session converted from another agent's logs are attributed to the agent its session-migration entry names, while turns run in pi after resuming it stay pi.
+func TestPiParseMigratedSession(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "session.jsonl")
+	lines := []string{
+		`{"type":"session","version":3,"id":"s1","timestamp":"2026-06-26T10:00:00.000Z","cwd":"/home/user/project"}`,
+		`{"type":"custom","id":"m1","parentId":null,"timestamp":"2026-06-26T10:00:00.000Z","customType":"session-migration","data":{"adapter":"gemini","sourcePath":"/backup/gemini/chat.json"}}`,
+		`{"type":"message","id":"a1","parentId":"m1","timestamp":"2026-06-26T10:00:02.000Z","message":{"role":"assistant","provider":"gemini","model":"gemini-2.5-pro","usage":{"input":10,"output":5,"cacheRead":0,"cacheWrite":0}}}`,
+		`{"type":"custom","id":"x1","parentId":"a1","timestamp":"2026-06-26T10:00:03.000Z","customType":"other-extension","data":{"adapter":"ignored"}}`,
+		`{"type":"message","id":"a2","parentId":"x1","timestamp":"2026-06-26T10:00:04.000Z","message":{"role":"assistant","provider":"gemini","model":"gemini-2.5-pro","usage":{"input":20,"output":5,"cacheRead":0,"cacheWrite":0}}}`,
+		// A turn run in pi after resuming the converted session is pi usage.
+		`{"type":"message","id":"a3","parentId":"a2","timestamp":"2026-06-26T11:00:00.000Z","message":{"role":"assistant","provider":"anthropic","model":"claude-opus-4-8","usage":{"input":30,"output":5,"cacheRead":0,"cacheWrite":0}}}`,
+		`{"type":"usage","id":"w1","parentId":"a3","timestamp":"2026-06-26T11:00:01.000Z","kind":"cache_warm","provider":"gemini","model":"gemini-2.5-pro","usage":{"input":1,"output":1,"cacheRead":0,"cacheWrite":0}}`,
+	}
+	err := os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	records, err := (&PiParser{}).Parse(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"gemini", "gemini", "pi", "pi"}
+	if len(records) != len(want) {
+		t.Fatalf("got %d records, want %d: %+v", len(records), len(want), records)
+	}
+	for i, record := range records {
+		if record.Agent != want[i] {
+			t.Errorf("record %d agent: got %q, want %q", i, record.Agent, want[i])
+		}
+	}
+}
